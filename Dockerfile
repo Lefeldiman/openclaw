@@ -67,6 +67,10 @@ RUN pnpm ui:build
 
 ENV NODE_ENV=production
 
+# Create openclaw CLI wrapper so the agent can call `openclaw` commands
+RUN printf '#!/bin/sh\nexec node /app/dist/index.js "$@"\n' > /usr/local/bin/openclaw && \
+    chmod +x /usr/local/bin/openclaw
+
 # Allow non-root user to write temp files during runtime/tests.
 RUN chown -R node:node /app
 
