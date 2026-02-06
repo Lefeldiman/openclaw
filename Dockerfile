@@ -16,6 +16,42 @@ RUN if [ -n "$OPENCLAW_DOCKER_APT_PACKAGES" ]; then \
       rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
     fi
 
+# ── Klyra skill dependencies ──────────────────────────────────────────
+# GitHub CLI (gh)
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      gh ffmpeg python3 python3-pip pipx && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Go (for blogwatcher)
+RUN curl -fsSL https://go.dev/dl/go1.23.6.linux-amd64.tar.gz | tar -C /usr/local -xz
+ENV PATH="/usr/local/go/bin:/root/go/bin:${PATH}"
+RUN go install github.com/Hyaxia/blogwatcher/cmd/blogwatcher@latest && \
+    cp /root/go/bin/blogwatcher /usr/local/bin/blogwatcher && \
+    rm -rf /usr/local/go /root/go
+
+# npm global tools: bird, clawhub, mcporter, claude-code (coding-agent skill)
+RUN npm install -g @steipete/bird clawhub mcporter @anthropic-ai/claude-code
+
+# nano-pdf (Python)
+RUN pipx install nano-pdf && \
+    ln -s /root/.local/bin/nano-pdf /usr/local/bin/nano-pdf
+
+# himalaya (email CLI) — pre-built binary
+RUN curl -fsSL https://github.com/pimalaya/himalaya/releases/download/v1.1.0/himalaya.x86_64-linux.tgz \
+      | tar -xz -C /usr/local/bin/ && \
+    chmod +x /usr/local/bin/himalaya
+
+# camsnap (camera capture) — pre-built binary
+RUN curl -fsSL https://github.com/steipete/camsnap/releases/download/v0.2.0/camsnap_0.2.0_linux_amd64.tar.gz \
+      | tar -xz -C /usr/local/bin/ && \
+    chmod +x /usr/local/bin/camsnap
+# ── End skill dependencies ─────────────────────────────────────────────
+
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY ui/package.json ./ui/package.json
 COPY patches ./patches
